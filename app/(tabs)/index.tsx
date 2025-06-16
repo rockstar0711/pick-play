@@ -1,75 +1,105 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import GameCard from "@/components/game/GameCard";
+import Tab from "@/components/game/Tab";
+import Typography from "@/components/ui/Typography";
+import { AppThemeContext } from "@/context/AppThemeProvider";
+import { useGames } from "@/hooks/useGames";
+import { Game } from "@/models/game";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useCallback, useContext, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function Dashboard() {
+  const { top, bottom } = useSafeAreaInsets();
+  const { games, loading, error } = useGames();
+  const { appliedTheme } = useContext(AppThemeContext);
+  const router = useRouter();
+  const [selectedOption, setSelectedOption] = useState("all");
 
-export default function HomeScreen() {
+  const brandImages = useMemo(
+    () => [
+      require("@/assets/images/brands/brand-1.png"),
+      require("@/assets/images/brands/brand-2.png"),
+      require("@/assets/images/brands/brand-3.png"),
+      require("@/assets/images/brands/brand-4.png"),
+      require("@/assets/images/brands/brand-5.png"),
+      require("@/assets/images/brands/brand-6.png"),
+      require("@/assets/images/brands/brand-7.png"),
+      require("@/assets/images/brands/brand-8.png"),
+      require("@/assets/images/brands/brand-9.png"),
+      require("@/assets/images/brands/brand-10.png"),
+    ],
+    []
+  );
+
+  const filteredGames = useMemo(
+    () =>
+      selectedOption === "all"
+        ? games
+        : games.filter((g) => g.status === selectedOption),
+    [games, selectedOption]
+  );
+
+  const renderGameCard = useCallback(
+    ({ item, index }: { item: Game; index: number }) => (
+      <GameCard game={item} index={index} brandImages={brandImages} />
+    ),
+    [brandImages]
+  );
+
+  if (loading || error || games.length === 0) {
+    const message = loading
+      ? ""
+      : error
+      ? "Oops, failed to load games."
+      : "No games available.";
+    return (
+      <View className="flex-1 justify-center items-center bg-primary p-4">
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color={appliedTheme === "dark" ? "#fff" : "#000"}
+          />
+        ) : (
+          <Text className="text-accent text-base">{message}</Text>
+        )}
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <>
+      <StatusBar style={appliedTheme === "dark" ? "light" : "dark"} />
+      <View
+        className="flex-1 bg-primary p-4"
+        style={{ paddingTop: top, paddingBottom: bottom + 50 }}
+      >
+        <Tab
+          options={["all", "upcoming", "live", "completed"]}
+          animationType="spring"
+          inactiveLabelColor="teal"
+          activeBackgroundColor="teal"
+          selectedOption={selectedOption}
+          onOptionPress={setSelectedOption}
+          springConfig={{ damping: 18, stiffness: 150 }}
+          containerStyle={{ marginBottom: 15 }}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {filteredGames.length === 0 ? (
+          <View className="flex-1 flex flex-row justify-center items-center">
+            <Typography className="text-primary">
+              No {selectedOption} matches :(
+            </Typography>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredGames}
+            keyExtractor={(item) => item.id}
+            renderItem={renderGameCard}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </View>
+    </>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
